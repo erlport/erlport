@@ -536,7 +536,7 @@ def encode_term(term,
         return "d\0\11undefined"
     elif t is OpaqueObject:
         return term.encode()
-    elif t is Map:
+    elif t is Map or t is dict:
         length = len(term)
         if length > 4294967295:
             raise ValueError("invalid Map size: %r" % length)

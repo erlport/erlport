@@ -34,6 +34,9 @@ from erlport.erlterms import Atom, List, ImproperList, \
                                 Map, OpaqueObject, MutationError
 from erlport.erlterms import encode, decode, IncompleteData
 
+class _TestObj(object):
+    def __init__(self, v):
+        self.v = v
 
 class AtomTestCase(unittest.TestCase):
 
@@ -418,6 +421,7 @@ class EncodeTestCase(unittest.TestCase):
             "\x83t\x00\x00\x00\x01t\x00\x00\x00\x00t\x00\x00\x00\x00",
             encode(Map({Map(): Map()}))
         )
+
         self.assertEqual(
             "\x83t\x00\x00\x00\x01m\x00\x00\x00\x06"
             "hello1m\x00\x00\x00\x06world1",
@@ -493,8 +497,11 @@ class EncodeTestCase(unittest.TestCase):
             encode(OpaqueObject("data", Atom("erlang"))))
 
     def test_encode_python_opaque_object(self):
-        self.assertEqual("\x83h\x03d\x00\x0f$erlport.opaqued\x00\x06python"
-            "m\x00\x00\x00\x06\x80\x02}q\x01.", encode(dict()))
+        obj = _TestObj(100)
+        self.assertEqual(
+            '\x83h\x03d\x00\x0f$erlport.opaqued'
+            '\x00\x06pythonm\x00\x00\x00,\x80\x02cerlterms_tests'   
+            '\n_TestObj\nq\x01)\x81q\x02}q\x03U\x01vKdsb.' , encode(obj))
         self.assertRaises(ValueError, encode, compile("0", "<string>", "eval"))
 
     def test_encode_compressed_term(self):
@@ -544,6 +551,12 @@ class TestSymmetric(unittest.TestCase):
             decode(encode(input))
         )
 
+        input = {}
+        self.assertEquals(
+            (input, ""),
+            decode(encode(input))
+        )
+
     def test_simple_map(self):
         input = Map({"hello": "world"})
         self.assertEquals(
@@ -552,10 +565,8 @@ class TestSymmetric(unittest.TestCase):
         )
 
     def test_big_map(self):
-        input = Map(
-            {"hello_" + str(i): "world" + str(i)
+        input = {"hello_" + str(i): "world" + str(i)
                 for i in range(10000)}
-        )
 
         self.assertEquals(
             (input, ""),
@@ -585,6 +596,12 @@ class TestSymmetric(unittest.TestCase):
 
         self.assertEquals(
             input[ImproperList([1, 2, 3], 1000)], "xxx")
+
+    def test_opaque(self):
+        input = _TestObj(100)
+        output, _ = decode(encode(input))
+               
+        self.assertEquals(input.v, input.v)
 
 
 def get_suite():
