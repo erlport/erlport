@@ -499,9 +499,10 @@ class EncodeTestCase(unittest.TestCase):
     def test_encode_python_opaque_object(self):
         obj = _TestObj(100)
         self.assertEqual(
-            '\x83h\x03d\x00\x0f$erlport.opaqued'
-            '\x00\x06pythonm\x00\x00\x00,\x80\x02cerlterms_tests'
-            '\n_TestObj\nq\x01)\x81q\x02}q\x03U\x01vKdsb.' , encode(obj))
+            "\x83h\x03d\x00\x0f$erlport.opaqued\x00\x06pythonm"
+            "\x00\x00\x00:\x80\x02cerlport.tests.erlterms_tests"
+            "\n_TestObj\nq\x01)\x81q\x02}q\x03U\x01vKdsb."
+            , encode(obj))
         self.assertRaises(ValueError, encode, compile("0", "<string>", "eval"))
 
     def test_encode_compressed_term(self):
