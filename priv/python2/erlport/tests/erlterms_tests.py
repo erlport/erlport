@@ -500,7 +500,7 @@ class EncodeTestCase(unittest.TestCase):
         obj = _TestObj(100)
         self.assertEqual(
             '\x83h\x03d\x00\x0f$erlport.opaqued'
-            '\x00\x06pythonm\x00\x00\x00,\x80\x02cerlterms_tests'   
+            '\x00\x06pythonm\x00\x00\x00,\x80\x02cerlterms_tests'
             '\n_TestObj\nq\x01)\x81q\x02}q\x03U\x01vKdsb.' , encode(obj))
         self.assertRaises(ValueError, encode, compile("0", "<string>", "eval"))
 
@@ -600,7 +600,6 @@ class TestSymmetric(unittest.TestCase):
     def test_opaque(self):
         input = _TestObj(100)
         output, _ = decode(encode(input))
-               
         self.assertEquals(input.v, input.v)
 
 

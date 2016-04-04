@@ -361,7 +361,7 @@ def decode_term(string,
         if len(lst) == 3 and lst[0] == opaque:
             return decode_opaque(lst[2], lst[1]), tail
         return tuple(lst), tail
-    elif tag in "t":
+    elif tag == "t":
         # MAP_EXT
         _decode_term = decode_term
         if len(string) < 5:
