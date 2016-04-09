@@ -107,7 +107,7 @@ class List(list):
     pop = _mutation_error
     sort = _mutation_error
     remove = _mutation_error
-    revert = _mutation_error
+    reverse = _mutation_error
     append = _mutation_error
     extend = _mutation_error
     insert = _mutation_error
