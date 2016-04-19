@@ -50,7 +50,7 @@
 -type timer() :: undefined | reference().
 
 -define(is_allowed_term(T), (is_atom(T) orelse is_number(T)
-    orelse is_binary(T))).
+    orelse is_binary(T)) orelse is_map(T)).
 
 -include("erlport.hrl").
 
