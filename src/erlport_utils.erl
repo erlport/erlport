@@ -50,7 +50,7 @@
 -type timer() :: undefined | reference().
 
 -define(is_allowed_term(T), (is_atom(T) orelse is_number(T)
-    orelse is_binary(T)) orelse is_map(T)).
+    orelse is_binary(T))).
 
 -include("erlport.hrl").
 
@@ -92,6 +92,8 @@ prepare_term(Term) ->
             Term;
         is_list(Term) ->
             prepare_list(Term);
+        is_map(Term) ->
+            prepare_map(Term);
         is_tuple(Term) ->
             list_to_tuple(prepare_list(tuple_to_list(Term)));
         true ->
@@ -111,6 +113,20 @@ prepare_list([]) ->
     [];
 prepare_list(ImproperTail) ->
     prepare_term(ImproperTail).
+
+
+%%
+%% @doc Prepare Erlang map for encoding
+%%
+
+-spec prepare_map(Map::map() | term()) -> PreparedMap::map().
+prepare_map(Map) ->
+    F = fun(K, V, Acc) ->
+        PrepKey = prepare_term(K),
+        PrepVal = prepare_term(V),
+        Acc#{PrepKey => PrepVal}
+    end,
+    maps:fold(F, #{}, Map).
 
 %%
 %% @doc Start timer if needed
