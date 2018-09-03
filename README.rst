@@ -39,11 +39,6 @@ Check http://erlport.org for more information:
 Feedback
 --------
 
-Please use the following channels for reporting bugs, offering suggestions or
-feedback:
+Please use Github issues for reporting bugs, offering suggestions or feedback:
 
-- ErlPort mail list: erlport@googlegroups.com (https://groups.google.com/d/forum/erlport)
-- ErlPort issue tracker: https://github.com/hdima/erlport/issues
-- Email: dima at hlabs.org
-- Send a message or follow me for updates on Twitter: `@hdima
-  <https://twitter.com/hdima>`_
+- ErlPort issue tracker: https://github.com/erlport/erlport/issues
