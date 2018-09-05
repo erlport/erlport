@@ -1,0 +1,25 @@
+dist: trusty
+sudo: required
+
+env:
+  - OTP_VERSION=21.0.5
+  - OTP_VERSION=20.3.8.6
+  - OTP_VERSION=19.3.6
+
+matrix:
+  include:
+    - language: python
+      python: 2.7
+    - language: python
+      python: 3.6
+    - language: ruby
+      rvm: 1.8
+    - language: ruby
+      rvm: 1.9
+
+before_install:
+  - wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
+  - sudo dpkg -i erlang-solutions_1.0_all.deb
+  - sudo apt-get install esl-erlang=$OTP_VERSION
+
+script: make test
