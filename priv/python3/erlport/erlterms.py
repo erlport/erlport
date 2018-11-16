@@ -43,6 +43,29 @@ from pickle import loads, dumps
 # from 2.5 to 3.2
 PICKLE_PROTOCOL = 2
 
+
+class MutationError(Exception):
+    pass
+
+
+def _mutation_error(self, *args, **kwargs):
+    raise MutationError("mutation disallowed on {0}.{1}".format(
+        self.__class__.__module__,
+        self.__class__.__name__
+    ))
+
+
+def immutable(v):
+    if isinstance(v, dict) and not isinstance(v, Map):
+        return Map(v)
+    elif isinstance(v, ImproperList):
+        return v
+    elif isinstance(v, list) and not isinstance(v, List):
+        return List(v)
+    else:
+        return v
+
+
 class IncompleteData(ValueError):
     """Need more data."""
 
@@ -80,6 +103,29 @@ class List(list):
 
     __slots__ = ()
 
+    pop = _mutation_error
+    sort = _mutation_error
+    remove = _mutation_error
+    reverse = _mutation_error
+    append = _mutation_error
+    extend = _mutation_error
+    insert = _mutation_error
+    __setitem__ = _mutation_error
+
+    def __new__(cls, *args, **kwargs):
+        l = []
+
+        new = super(List, cls).__new__(cls)
+
+        list.__init__(l, *args, **kwargs)
+        for v in l:
+            v = immutable(v)
+            super(List, new).append(v)
+        return new
+
+    def __init__(self, *args, **kwargs):
+        pass
+
     def to_string(self):
         # Will raise TypeError if can't be converted
         return "".join(map(chr, self))
@@ -87,21 +133,75 @@ class List(list):
     def __repr__(self):
         return "List(%s)" % super(List, self).__repr__()
 
+    def __hash__(self):
+        return hash(tuple(self))
+
+
+class Map(dict):
+    __slots__ = ()
+
+    pop = _mutation_error
+    clear = _mutation_error
+    update = _mutation_error
+    popitem = _mutation_error
+    setdefault = _mutation_error
+    __setitem__ = _mutation_error
+    __delitem__ = _mutation_error
+
+    def __new__(cls, *args, **kwargs):
+        d = {}
+        new = dict.__new__(cls)
+        dict.__init__(d, *args, **kwargs)
+        for k, v in d.items():
+            k = immutable(k)
+            v = immutable(v)
+            dict.__setitem__(new, k, v)
+        return new
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def __repr__(self):
+        return "Map(%s)" % super(Map, self).__repr__()
+
+    def __hash__(self):
+        return hash(tuple(sorted(self.items())))
+
 
 class ImproperList(list):
     """Improper list."""
 
     __slots__ = "tail"
 
-    def __init__(self, lst, tail):
+    pop = _mutation_error
+    sort = _mutation_error
+    remove = _mutation_error
+    reverse = _mutation_error
+    append = _mutation_error
+    extend = _mutation_error
+    insert = _mutation_error
+    __setattr__ = _mutation_error
+    __setitem__ = _mutation_error
+
+    def __new__(cls, lst, tail):
         if not isinstance(lst, list):
             raise TypeError("list object expected")
         elif not lst:
             raise ValueError("empty list not allowed")
         if isinstance(tail, list):
             raise TypeError("non list object expected for tail")
-        self.tail = tail
-        return super(ImproperList, self).__init__(lst)
+
+        new = super(ImproperList, cls).__new__(cls)
+
+        for v in lst:
+            v = immutable(v)
+            super(ImproperList, new).append(v)
+
+        super(ImproperList, new).__setattr__("tail", tail)
+        return new
+
+    def __init__(self, lst, tail):
+        pass
 
     def __repr__(self):
         return "ImproperList(%s, %r)" % (
@@ -113,6 +213,9 @@ class ImproperList(list):
 
     def __ne__(self, other):
         return not self == other
+
+    def __hash__(self):
+        return hash((tuple(self), self.tail))
 
 
 class OpaqueObject(object):
@@ -239,13 +342,14 @@ def decode_term(string,
                 raise IncompleteData(string)
             length, = int4_unpack(string[1:5])
             tail = string[5:]
-        lst = List()
+        lst = []
         append = lst.append
         _decode_term = decode_term
         while length > 0:
             term, tail = _decode_term(tail)
             append(term)
             length -= 1
+        lst = List(lst)
         if tag == 108:
             if not tail:
                 raise IncompleteData(string)
@@ -256,6 +360,20 @@ def decode_term(string,
         if len(lst) == 3 and lst[0] == opaque:
             return decode_opaque(lst[2], lst[1]), tail
         return tuple(lst), tail
+    elif tag == 116:
+        # MAP_EXT
+        _decode_term = decode_term
+        if len(string) < 5:
+            raise IncompleteData(string)
+        length, = int4_unpack(string[1:5])
+        tail = string[5:]
+        d = {}
+        while length > 0:
+            k, tail = _decode_term(tail)
+            v, tail = _decode_term(tail)
+            d[k] = v
+            length -= 1
+        return Map(d), tail
     elif tag == 97:
         # SMALL_INTEGER_EXT
         if len(string) < 2:
@@ -411,6 +529,13 @@ def encode_term(term,
         return b"d\0\11undefined"
     elif t is OpaqueObject:
         return term.encode()
+    elif t is Map or t is dict:
+        length = len(term)
+        if length > 4294967295:
+            raise ValueError("invalid Map size: %r" % length)
+        header = char_int4_pack(b't', length)
+        return header + b"".join([
+            encode_term(k) + encode_term(v) for k, v in term.items()])
     elif t is ImproperList:
         length = len(term)
         if length > 4294967295:

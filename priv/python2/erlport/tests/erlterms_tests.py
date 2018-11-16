@@ -30,9 +30,13 @@ import unittest
 from pickle import dumps
 
 from erlport import erlterms
-from erlport.erlterms import Atom, List, ImproperList, OpaqueObject
+from erlport.erlterms import Atom, List, ImproperList, \
+                                Map, OpaqueObject, MutationError
 from erlport.erlterms import encode, decode, IncompleteData
 
+class _TestObj(object):
+    def __init__(self, v):
+        self.v = v
 
 class AtomTestCase(unittest.TestCase):
 
@@ -50,6 +54,7 @@ class AtomTestCase(unittest.TestCase):
         self.assertRaises(ValueError, Atom, "X" * 256)
         self.assertRaises(TypeError, Atom, [1, 2])
 
+
 class ListTestCase(unittest.TestCase):
 
     def test_list(self):
@@ -64,6 +69,28 @@ class ListTestCase(unittest.TestCase):
         self.assertTrue(isinstance(lst.to_string(), unicode))
         self.assertRaises(TypeError, List("ab").to_string)
 
+
+class MapTestCase(unittest.TestCase):
+    def test_map(self):
+        m = Map()
+        self.assertTrue(isinstance(m, dict))
+
+        m = Map(foo="bar")
+        self.assertEqual(m["foo"], "bar")
+
+        m = Map([("x", "y")], foo="bar")
+        self.assertEqual(m["foo"], "bar")
+        self.assertEqual(m["x"], "y")
+
+    def test_immutable(self):
+        m = Map({"x": 100})
+        self.assertRaises(MutationError, m.pop)
+
+    def test_construct(self):
+        m = Map(x=[1, 2, 3])
+        self.assertTrue(isinstance(m["x"], List))
+
+
 class ImproperListTestCase(unittest.TestCase):
 
     def test_improper_list(self):
@@ -72,6 +99,11 @@ class ImproperListTestCase(unittest.TestCase):
         self.assertEqual([1, 2, 3], list(improper))
         self.assertEqual("tail", improper.tail)
         self.assertEqual("ImproperList([1, 2, 3], 'tail')", repr(improper))
+
+    def test_immutable(self):
+        m = ImproperList([1, 2, 3], 100)
+        self.assertRaises(MutationError, m.append, 1)
+        self.assertRaises(MutationError, setattr, m, "x", 1)
 
     def test_comparison(self):
         improper = ImproperList([1, 2, 3], "tail")
@@ -84,6 +116,7 @@ class ImproperListTestCase(unittest.TestCase):
         self.assertRaises(TypeError, ImproperList, "invalid", "tail")
         self.assertRaises(TypeError, ImproperList, [1, 2, 3], ["invalid"])
         self.assertRaises(ValueError, ImproperList, [], "tail")
+
 
 class OpaqueObjectTestCase(unittest.TestCase):
 
@@ -130,6 +163,7 @@ class OpaqueObjectTestCase(unittest.TestCase):
         obj4 = OpaqueObject("data2", Atom("language"))
         self.assertNotEqual(hash(obj), hash(obj4))
 
+
 class DecodeTestCase(unittest.TestCase):
 
     def test_decode(self):
@@ -159,6 +193,31 @@ class DecodeTestCase(unittest.TestCase):
         self.assertEqual(([], ""), decode("\x83j"))
         self.assertTrue(isinstance(decode("\x83j")[0], List))
         self.assertEqual(([], "tail"), decode("\x83jtail"))
+
+    def test_decode_empty_map(self):
+        self.assertEqual((Map(), ""), decode("\x83t\x00\x00\x00\x00"))
+
+    def test_decode_map(self):
+        self.assertEqual(
+            (Map(hello="world"), ""),
+            decode(
+                "\x83t\x00\x00\x00\x01m\x00\x00\x00\x05"
+                "hellom\x00\x00\x00\x05world")
+        )
+
+        self.assertEqual(
+            (Map(hello="world"), "rest"),
+            decode(
+                "\x83t\x00\x00\x00\x01m\x00\x00\x00\x05"
+                "hellom\x00\x00\x00\x05worldrest")
+        )
+
+        self.assertEqual(
+            (Map(hello=List()), ""),
+            decode("\x83t\x00\x00\x00\x01m\x00\x00\x00\x05helloj")
+        )
+
+        self.assertRaises(IncompleteData, decode, "\x83t\x00\x00\x00")
 
     def test_decode_string_list(self):
         self.assertRaises(IncompleteData, decode, "\x83k")
@@ -330,6 +389,7 @@ class DecodeTestCase(unittest.TestCase):
         self.assertEqual(([100] * 20, "tail"), decode("\x83P\0\0\0\x17"
             "\x78\xda\xcb\x66\x10\x49\xc1\2\0\x5d\x60\x08\x50tail"))
 
+
 class EncodeTestCase(unittest.TestCase):
 
     def test_encode_tuple(self):
@@ -342,6 +402,9 @@ class EncodeTestCase(unittest.TestCase):
     def test_encode_empty_list(self):
         self.assertEqual("\x83j", encode([]))
 
+    def test_encode_empty_map(self):
+        self.assertEqual("\x83t\x00\x00\x00\x00", encode(Map()))
+
     def test_encode_string_list(self):
         self.assertEqual("\x83k\0\1\0", encode([0]))
         r = range(0, 256)
@@ -352,6 +415,24 @@ class EncodeTestCase(unittest.TestCase):
         self.assertEqual("\x83l\0\0\0\5jjjjjj", encode([[], [], [], [], []]))
         self.assertEqual("\x83l\0\0\0\5jjjjjj",
             encode(List([List([]), List([]), List([]), List([]), List([])])))
+
+    def test_encode_map(self):
+        self.assertEqual(
+            "\x83t\x00\x00\x00\x01t\x00\x00\x00\x00t\x00\x00\x00\x00",
+            encode(Map({Map(): Map()}))
+        )
+
+        self.assertEqual(
+            "\x83t\x00\x00\x00\x01m\x00\x00\x00\x06"
+            "hello1m\x00\x00\x00\x06world1",
+            encode(Map(hello1="world1"))
+        )
+
+        self.assertEqual(
+            "\x83t\x00\x00\x00\x01m\x00\x00\x00\x06"
+            "hello1k\x00\x03\x01\x02\x03",
+            encode(Map(hello1=List([1, 2, 3])))
+        )
 
     def test_encode_improper_list(self):
         self.assertEqual("\x83l\0\0\0\1h\0h\0", encode(ImproperList([()], ())))
@@ -416,8 +497,12 @@ class EncodeTestCase(unittest.TestCase):
             encode(OpaqueObject("data", Atom("erlang"))))
 
     def test_encode_python_opaque_object(self):
-        self.assertEqual("\x83h\x03d\x00\x0f$erlport.opaqued\x00\x06python"
-            "m\x00\x00\x00\x06\x80\x02}q\x01.", encode(dict()))
+        obj = _TestObj(100)
+        self.assertEqual(
+            "\x83h\x03d\x00\x0f$erlport.opaqued\x00\x06pythonm"
+            "\x00\x00\x00:\x80\x02cerlport.tests.erlterms_tests"
+            "\n_TestObj\nq\x01)\x81q\x02}q\x03U\x01vKdsb."
+            , encode(obj))
         self.assertRaises(ValueError, encode, compile("0", "<string>", "eval"))
 
     def test_encode_compressed_term(self):
@@ -436,6 +521,88 @@ class EncodeTestCase(unittest.TestCase):
         self.assertEqual("\x83P\x00\x00\x00\x15"
             "x\x01\xcba``\xe0\xcfB\x03\x00B@\x07\x1c",
             encode([[]] * 15, 1))
+
+
+class TestSymmetric(unittest.TestCase):
+    def test_empty_list(self):
+        input = List()
+        self.assertEquals(
+            (input, ""),
+            decode(encode(input))
+        )
+
+    def test_simple_list(self):
+        input = List([1, 2, 3])
+        self.assertEquals(
+            (input, ""),
+            decode(encode(input))
+        )
+
+    def test_nested_list(self):
+        input = List([[[[[[]]]]]])
+        self.assertEquals(
+            (input, ""),
+            decode(encode(input))
+        )
+
+    def test_empty_map(self):
+        input = Map()
+        self.assertEquals(
+            (input, ""),
+            decode(encode(input))
+        )
+
+        input = {}
+        self.assertEquals(
+            (input, ""),
+            decode(encode(input))
+        )
+
+    def test_simple_map(self):
+        input = Map({"hello": "world"})
+        self.assertEquals(
+            (input, ""),
+            decode(encode(input))
+        )
+
+    def test_big_map(self):
+        input = {"hello_" + str(i): "world" + str(i)
+                for i in range(10000)}
+
+        self.assertEquals(
+            (input, ""),
+            decode(encode(input))
+        )
+
+    def test_hash_list(self):
+        input = Map({List([1, 2, 3]): [4, 5, 6]})
+        self.assertEquals(
+            input[List([1, 2, 3])],
+            List([4, 5, 6])
+        )
+        self.assertEquals(
+            (input, ""),
+            decode(encode(input))
+        )
+
+    def test_hash_improper_list(self):
+        input = Map({
+            ImproperList([1, 2, 3], 1000): "xxx"
+        })
+
+        self.assertEquals(
+            (input, ""),
+            decode(encode(input))
+        )
+
+        self.assertEquals(
+            input[ImproperList([1, 2, 3], 1000)], "xxx")
+
+    def test_opaque(self):
+        input = _TestObj(100)
+        output, _ = decode(encode(input))
+        self.assertEquals(input.v, input.v)
+
 
 def get_suite():
     load = unittest.TestLoader().loadTestsFromTestCase
