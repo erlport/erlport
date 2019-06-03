@@ -1,9 +1,9 @@
 # Copyright (c) 2009-2015, Dmitry Vasiliev <dima@hlabs.org>
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 #  * Redistributions of source code must retain the above copyright notice,
 #    this list of conditions and the following disclaimer.
 #  * Redistributions in binary form must reproduce the above copyright notice,
@@ -11,8 +11,8 @@
 #    and/or other materials provided with the distribution.
 #  * Neither the name of the copyright holders nor the names of its
 #    contributors may be used to endorse or promote products derived from this
-#    software without specific prior written permission. 
-# 
+#    software without specific prior written permission.
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 # AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -25,24 +25,40 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-compile:
+require "erlport/erlterms"
 
-test: cleanup-test coverage-info
-	@python -c 'from erlport.tests import main; main()'
+include ErlPort::ErlTerm
 
-test-verbose: cleanup-test coverage-info
-	@python -c 'from erlport.tests import main; main()' -v
+module ErlPort
+module StdIO
 
-coverage-info:
-	#
-	# Tests coverage information will be written to .cover directory if coverage
-	# package is installed
-	#
+    module_function
+    def redirect port
+        $stdin = RedirectedStdin.new
+        $stdout = RedirectedStdout.new port
+    end
 
-cleanup-test:
-	@rm -rf .cover
+    private
 
-clean: cleanup-test
-	@find . \( -name '*.py[co]' -o -name '__pycache__' \) -delete
+    class RedirectedStdin
+        def method_missing name, *args
+            raise IOError, "STDIN is closed for ErlPort connected process"
+        end
+    end
 
-.PHONY: compile test test-verbose cleanup-test clean coverage-info
+    class RedirectedStdout
+        def initialize port
+            @port = port
+        end
+
+        def write string
+            @port.write(Tuple.new([:P, string]))
+        end
+
+        def method_missing name, *args
+            raise IOError, "unsupported STDOUT operation for ErlPort"
+                " connected process"
+        end
+    end
+end
+end

@@ -25,14 +25,5 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-compile:
-
-test:
-	@ruby -I . test/tests.rb
-
-test-verbose:
-	@ruby -I . test/tests.rb
-
-clean:
-
-.PHONY: compile test test-verbose clean
+class ValueError < Exception
+end
