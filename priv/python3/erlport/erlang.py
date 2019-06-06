@@ -28,7 +28,7 @@
 from inspect import getargspec
 import sys
 from sys import exc_info
-from traceback import extract_tb
+from traceback import extract_tb, format_list
 from threading import Lock
 import uuid
 
@@ -234,7 +234,7 @@ class MessageHandler(object):
         except:
             t, val, tb = exc_info()
             exc = Atom(bytes("%s.%s" % (t.__module__, t.__name__), "utf-8"))
-            exc_tb = extract_tb(tb)
+            exc_tb = format_list(extract_tb(tb))
             exc_tb.reverse()
             error = Atom(b"python"), exc, str(val), exc_tb
             if mid is not None:
