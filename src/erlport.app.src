@@ -1,9 +1,11 @@
 {application,erlport,
              [{description,"Erlang port protocol"},
-              {vsn,"0.10.0"},
+              {vsn,"0.10.1"},
               {modules,[]},
               {registered,[]},
               {applications,[kernel,stdlib]},
-              {maintainers,["Wenfu Pan", "Jeffery Utter", "Benedikt Reinartz"]},
+              {maintainers,["Wenfu Pan","Jeffery Utter","Benedikt Reinartz"]},
               {licenses,["BSD-3-Clause"]},
-              {links,[{"Github","https://github.com/erlport/erlport"},{"Original Github","https://github.com/hdima/erlport"}]}]}.
+              {links,[{"Github","https://github.com/erlport/erlport"},
+                      {"Original Github",
+                       "https://github.com/hdima/erlport"}]}]}.
