@@ -156,7 +156,7 @@ class RedirectedStdout(object):
         if self.__closed:
             raise ValueError("I/O operation on closed file")
         if not isinstance(data, (str, unicode, buffer)):
-            raise TypeError("expected a characer buffer object")
+            raise TypeError("expected a character buffer object")
         return self.__port.write((Atom("P"), data))
 
     def writelines(self, lst):
