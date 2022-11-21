@@ -25,7 +25,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from inspect import getargspec
+from inspect import getfullargspec
 import sys
 from sys import exc_info
 from traceback import extract_tb, format_list
@@ -127,8 +127,8 @@ class MessageHandler(object):
         self.handler = handler
 
     def _check_handler(self, handler):
-        # getargspec will raise TypeError if handler is not a function
-        args, varargs, _keywords, defaults = getargspec(handler)
+        # getfullargspec will raise TypeError if handler is not a function
+        args, varargs, _keywords, defaults, *_rest = getfullargspec(handler)
         largs = len(args)
         too_much = largs > 1 and largs - len(default) > 1
         too_few = largs == 0 and varargs is None
