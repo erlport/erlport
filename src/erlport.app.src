@@ -1,6 +1,6 @@
 {application,erlport,
              [{description,"Erlang port protocol"},
-              {vsn,"0.10.1"},
+              {vsn,"0.11.0"},
               {modules,[]},
               {registered,[]},
               {applications,[kernel,stdlib]},
