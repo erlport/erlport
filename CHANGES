@@ -118,7 +118,7 @@ Version 0.3 (2010-01-03)
 
     - Added float datatype
 
-    - Splitted Port and Protocol
+    - Split Port and Protocol
 
     - Added more examples
 

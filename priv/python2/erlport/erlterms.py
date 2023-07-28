@@ -478,7 +478,7 @@ def encode_term(term,
             return "j"
         elif length <= 65535:
             try:
-                # Array coersion will allow floats as a deprecated feature in
+                # Array coercion will allow floats as a deprecated feature in
                 # Python 2.6 and previous versions
                 for t in term:
                     typ = type(t)
